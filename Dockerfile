@@ -1,10 +1,10 @@
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 RUN pip install uv
 COPY pyproject.toml uv.lock ./
 COPY src ./src
-RUN uv build --frozen-lock --out-dir /app/dist .
+RUN uv build --out-dir /app/dist .
 
 
 FROM python:3.12-slim
