@@ -174,3 +174,9 @@ cython_debug/
 .pypirc
 plex_lastfm_now_playing.egg-info
 .idea
+.idea/inspectionProfiles
+.idea/misc.xml
+.idea/modules.xml
+.idea/plex_lastfm_now_playing.iml
+.idea/vcs.xml
+.idea/workspace.xml
