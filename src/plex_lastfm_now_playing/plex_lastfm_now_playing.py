@@ -25,7 +25,7 @@ class LastFmUpdater:
     def __init__(self) -> None:
         """Initialize the Last.fm network connection."""
         self.network: pylast.LastFMNetwork | None = None
-        self.setup_mode = False  # Flag to indicate if the app needs Last.fm setup
+        self.setup_mode = False
         self.skg = None
         self.setup_url = None
 
@@ -36,8 +36,9 @@ class LastFmUpdater:
             session_key = settings.LASTFM_SESSION_KEY
 
             if not all([api_key, api_secret, username]):
-                logger.error("Missing Last.fm credentials in environment variables.")
-                raise ValueError("Missing Last.fm credentials")
+                self.setup_mode = True
+                logger.exception("Missing Last.fm credentials in environment variables.")
+                raise ValueError("Missing Last.fm credentials in environment variables.")
 
             # Attempt to authenticate and initialize self.network otherwise fall into set up mode
             if session_key and username:

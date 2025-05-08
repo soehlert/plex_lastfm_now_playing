@@ -80,7 +80,7 @@ async def setup_lastfm():
         raise HTTPException(status_code=400, detail="Last.fm updater is not in setup mode")
 
     try:
-        _, auth_url = lastfm_updater.generate_auth_token()
+        _, auth_url = lastfm_updater.generate_auth_url()
         return {
             "auth_url": auth_url,
             "message": "Please visit this URL to authorize the application, then return to /setup/lastfm/complete"
