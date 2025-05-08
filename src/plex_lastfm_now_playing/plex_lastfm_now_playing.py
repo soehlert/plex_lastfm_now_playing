@@ -8,8 +8,8 @@ import pylast
 from pylast import SessionKeyGenerator
 from typing import Any
 
-from .config import settings
-from .models import (
+from config import settings
+from models import (
     PlexMetadata,
     PlexWebhookPayload,
 )
