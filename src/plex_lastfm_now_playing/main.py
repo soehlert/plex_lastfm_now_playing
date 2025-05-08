@@ -7,8 +7,8 @@ from fastapi import FastAPI, Form, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 from typing import Any
 
-from plex_lastfm_now_playing import LastFmUpdater, PlexWebhookHandler
-from models import (
+from .plex_lastfm_now_playing import LastFmUpdater, PlexWebhookHandler
+from .models import (
     AuthResponse,
     PlexWebhookPayload,
     SessionKeyResponse
