@@ -69,7 +69,7 @@ You can run this application using Docker (amd64 or arm64) or as a systemd servi
     docker-compose up -d
     ```
 
-### Method 2: Running as a systemd Service (Linux)
+### Method 2: Running as a systemd service (Linux)
 This method involves installing the application directly on your Linux system and running it under systemd.
 
 Prerequisites:
@@ -80,7 +80,7 @@ Prerequisites:
 
 Steps:
 
-1. **Clone the repository (if you have access to the source):**
+1. **Clone the repository:**
     ```bash
     git clone https://github.com/soehlert/plex_lastfm_now_playing /usr/local/plex_lastfm_now_playing
     chown scrobbler:scrobbler /usr/local/plex_lastfm_now_playing
