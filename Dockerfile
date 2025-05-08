@@ -7,7 +7,7 @@ RUN pip install uv
 
 # Install dependencies using uv
 COPY pyproject.toml uv.lock* ./
-RUN uv venv && source .venv/bin/activate && uv pip install -e .
+RUN uv venv && . .venv/bin/activate && uv pip install -e .
 
 # Create user
 RUN groupadd --gid 1001 appgroup && \
