@@ -91,7 +91,7 @@ async def setup_lastfm():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/setup/lastfm/complete", response_model=JSONResponse)
+@app.get("/setup/lastfm/complete")
 async def complete_lastfm_setup(username: str = Query(..., description="Your Last.fm username")):
     """Complete the Last.fm authentication process."""
     lastfm_updater = app_state.get("lastfm_updater")

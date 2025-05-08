@@ -32,7 +32,3 @@ class PlexWebhookPayload(BaseModel):
 class AuthResponse(BaseModel):
     auth_url: str
     message: str
-
-class SessionKeyResponse(BaseModel):
-    session_key: str
-    message: str
