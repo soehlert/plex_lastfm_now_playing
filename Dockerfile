@@ -7,17 +7,17 @@ RUN pip install uv
 
 # Install dependencies using uv
 COPY pyproject.toml uv.lock* ./
-RUN uv pip install -e .
+RUN uv venv && source .venv/bin/activate && uv pip install -e .
 
 # Create user
 RUN groupadd --gid 1001 appgroup && \
-    useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash appuser
+    useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash scrobbler
 
 # Set permissions
-RUN chown -R appuser:appgroup /app
+RUN chown -R scrobbler:appgroup /app
 
 # Switch to non-root user
-USER appuser
+USER scrobbler
 
 # Expose port
 EXPOSE 8000
