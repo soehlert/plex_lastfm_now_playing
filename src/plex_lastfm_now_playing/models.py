@@ -28,3 +28,11 @@ class PlexWebhookPayload(BaseModel):
     Metadata: PlexMetadata | None = None
     Account: PlexAccount | None = None
     Player: PlexPlayer | None = None
+
+class AuthResponse(BaseModel):
+    auth_url: str
+    message: str
+
+class SessionKeyResponse(BaseModel):
+    session_key: str
+    message: str

@@ -1,12 +1,11 @@
 """Scrobble now playing info from Plex to Last.fm"""
 
 import asyncio
-import json
 import logging.config
+import os
 import pylast
 
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, Form, HTTPException, status
+from pylast import SessionKeyGenerator
 from typing import Any
 
 from config import settings
@@ -26,27 +25,119 @@ class LastFmUpdater:
     def __init__(self) -> None:
         """Initialize the Last.fm network connection."""
         self.network: pylast.LastFMNetwork | None = None
+        self.setup_mode = False  # Flag to indicate if the app needs Last.fm setup
+        self.skg = None
+        self.setup_url = None
+
         try:
             api_key = settings.LASTFM_API_KEY
             api_secret = settings.LASTFM_API_SECRET
             username = settings.LASTFM_USERNAME
-            password_hash = settings.LASTFM_PASSWORD_HASH
+            session_key = settings.LASTFM_SESSION_KEY
 
-            if not all([api_key, api_secret, username, password_hash]):
+            if not all([api_key, api_secret, username]):
                 logger.error("Missing Last.fm credentials in environment variables.")
                 raise ValueError("Missing Last.fm credentials")
 
-            self.network = pylast.LastFMNetwork(
-                api_key=api_key,
-                api_secret=api_secret,
-                username=username,
-                password_hash=password_hash,
-            )
-            self.network.enable_caching()
-            logger.info("Last.fm network initialized for user: %s", username)
+            # Attempt to authenticate and initialize self.network otherwise fall into set up mode
+            if session_key and username:
+                self.network = pylast.LastFMNetwork(
+                    api_key=api_key,
+                    api_secret=api_secret,
+                    username=username,
+                    session_key=session_key
+                )
+                self.network.enable_caching()
+                logger.info("Last.fm network initialized for user %s using session key.", username)
+            else:
+                logger.warning("No session key found. Entering setup mode.")
+                self.setup_mode = True
+                # This is enough for pylast to request an authentication token later,
+                # but not enough to make authenticated calls like scrobbling.
+                self.network = pylast.LastFMNetwork(
+                    api_key=api_key,
+                    api_secret=api_secret
+                )
         except (pylast.WSError, pylast.NetworkError, ValueError) as e:
             logger.exception("Failed to initialize Last.fm network: %s", e)
             self.network = None
+
+    def is_ready(self) -> bool:
+        """Check if the Last.fm updater is ready for normal operation."""
+        return self.network is not None and not self.setup_mode
+
+    def generate_auth_url(self, network) -> tuple[SessionKeyGenerator, str]:
+        """Generate an authentication token and URL for Last.fm authorization."""
+        if not self.setup_mode or not self.network:
+            raise ValueError("Not in setup mode or network not initialized")
+
+        try:
+            self.skg = pylast.SessionKeyGenerator(network)
+            self.setup_url = self.skg.get_web_auth_url()
+
+            return self.skg, self.setup_url
+        except (pylast.WSError, pylast.NetworkError) as e:
+            logger.exception("Failed to generate auth token: %s", e)
+            raise ValueError(f"Failed to generate auth token: {e}")
+
+    async def complete_auth(self, username: str) -> str:
+        """Complete the authentication process and get a session key."""
+        if not self.setup_mode or not self.network:
+            raise ValueError("Not in setup mode, network not initialized, or no token generated")
+
+        session_key = self.skg.get_web_auth_session_key(self.setup_url)
+
+        try:
+            # Now reinitialize the network with the session key and username
+            self.network = pylast.LastFMNetwork(
+                api_key=settings.LASTFM_API_KEY,
+                api_secret=settings.LASTFM_API_SECRET,
+                username=username,
+                session_key=session_key
+            )
+            self.network.enable_caching()
+
+            # Exit setup mode
+            self.setup_mode = False
+            self.setup_url = None
+
+            self._update_env_file(session_key)
+
+            logger.info("Last.fm authentication completed successfully for user %s", username)
+            return session_key
+        except (pylast.WSError, pylast.NetworkError) as e:
+            logger.exception("Failed to complete authentication: %s", e)
+            raise ValueError(f"Failed to complete authentication: {e}")
+
+    @staticmethod
+    def _update_env_file(session_key: str) -> None:
+        """Update the .env file with the new session key and username."""
+
+        # Get the path to the .env file (assuming it's in the project root)
+        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+
+        # Read the current contents of the .env file
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                lines = f.readlines()
+        else:
+            lines = []
+
+        session_key_found = False
+
+        for i, line in enumerate(lines):
+            if line.startswith("LASTFM_SESSION_KEY="):
+                lines[i] = f"LASTFM_SESSION_KEY={session_key}\n"
+                session_key_found = True
+
+        if not session_key_found:
+            lines.append(f"LASTFM_SESSION_KEY={session_key}\n")
+
+        # Write the updated contents back to the .env file
+        with open(env_path, "w") as f:
+            f.writelines(lines)
+
+        logger.info("Updated .env file with Last.fm session key.")
 
     async def update_now_playing(
         self, artist: str, title: str, album: str | None = None, album_artist: str | None = None
@@ -233,61 +324,3 @@ class PlexWebhookHandler:
             await self._stop_periodic_update(reason="media.stop event")
         else:
             logger.debug("Ignoring irrelevant event: %s", event)
-
-
-# Global instances (managed by lifespan context)
-app_state: dict[str, Any] = {}
-
-# noinspection PyUnusedLocal,PyShadowingNames
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manages application startup and shutdown logic."""
-    logger.info("Application startup")
-    # Create instances needed for the application lifetime
-    app_state["lastfm_updater"] = LastFmUpdater()
-    app_state["webhook_handler"] = PlexWebhookHandler(app_state["lastfm_updater"])
-    yield
-    logger.info("Application shutdown")
-    handler = app_state.get("webhook_handler")
-    if handler:
-        # Gracefully stop any running background task on shutdown
-        await handler._stop_periodic_update(reason="Application shutdown")
-    logger.info("Cleanup complete.")
-
-
-app = FastAPI(lifespan=lifespan, title="Plex Last.fm Now Playing Scrobbler")
-
-@app.post("/webhook")
-async def plex_webhook_endpoint(payload: str = Form(...)):
-    """Receives webhooks from Plex Media Server."""
-    webhook_handler = app_state.get("webhook_handler")
-    if not webhook_handler:
-        logger.error("Webhook handler not initialized.")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-
-    try:
-        data = json.loads(payload)
-        logger.debug("Received webhook payload: %s", data)
-        parsed_payload = PlexWebhookPayload.model_validate(data)
-    except json.JSONDecodeError:
-        logger.error("Failed to decode JSON from payload: %s", payload)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload")
-    except Exception:  # Catch Pydantic validation errors etc.
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload structure")
-
-    try:
-        await webhook_handler.process_webhook(parsed_payload)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Error processing webhook") # Optional
-
-    return {"message": "Webhook received"}
-
-@app.get("/health")
-async def health_check():
-    """Simple health check endpoint."""
-    return {"status": "ok"}
-
-if __name__ == "__main__":
-    import uvicorn
-    logger.info("Starting Uvicorn server...")
-    uvicorn.run(app, host="::", port=8000)

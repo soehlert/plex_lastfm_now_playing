@@ -4,12 +4,18 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """Define the settings we need."""
-    LASTFM_API_KEY: str
-    LASTFM_API_SECRET: str
-    LASTFM_USERNAME:str
-    LASTFM_PASSWORD_HASH: str  # Generate using pylast.md5('your_password')
+
+    # Default values
+    APP_PORT: int = 8000
+    LOG_LEVEL: str = "INFO"
     UPDATE_INTERVAL_SECONDS: int = 60
-    PAUSE_TIMEOUT_SECONDS: float = 10.0
+    PAUSE_TIMEOUT_SECONDS: int = 300
+
+    # Required values (no defaults)
+    LASTFM_API_KEY: str = None
+    LASTFM_API_SECRET: str = None
+    LASTFM_USERNAME: str = None
+    LASTFM_SESSION_KEY: str | None = None
 
     class Config:
         """Define our settings file."""

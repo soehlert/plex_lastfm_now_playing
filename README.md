@@ -38,6 +38,8 @@ You can run this application using Docker (amd64 or arm64) or as a systemd servi
         restart: unless-stopped
         ports:
             - "8000:8000"
+        volumes:
+            - ./lastfm-data/.env:/app/.env
         # Set up to read env vars from portainer
         environment:
             - LASTFM_API_KEY=${LAST_API_KEY}
@@ -49,7 +51,7 @@ You can run this application using Docker (amd64 or arm64) or as a systemd servi
             - PAUSE_TIMEOUT_SECONDS=${PAUSE_TIMEOUT_SECONDS} # how long until the pause is considered a stop - default 10s
         # Uncomment envfile stuff if you want to use that instead of the individual env vars
         #env_file:
-        #    - ./.env
+        #    - ./lastfm-data/.env
     ```
     Optional env_file:
 
