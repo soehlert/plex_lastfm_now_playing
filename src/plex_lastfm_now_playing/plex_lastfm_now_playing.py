@@ -8,8 +8,8 @@ import pylast
 from pylast import SessionKeyGenerator
 from typing import Any
 
-from config import settings
-from models import (
+from src.plex_lastfm_now_playing.config import settings
+from src.plex_lastfm_now_playing.models import (
     PlexMetadata,
     PlexWebhookPayload,
 )
