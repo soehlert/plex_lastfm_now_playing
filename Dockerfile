@@ -14,8 +14,7 @@ RUN groupadd --gid 1001 appgroup && \
 RUN chown -R scrobbler:appgroup /app
 
 USER scrobbler
-ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--proxy-headers", "--port", "8000"]
+CMD ["/app/.venv/bin/fastapi", "run", "app/src/plex_lastfm_now_playing/main.py", "--proxy-headers", "--port", "8000"]
