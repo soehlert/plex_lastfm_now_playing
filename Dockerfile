@@ -18,4 +18,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--proxy-headers", "--port", "80"]
+CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--proxy-headers", "--port", "8000"]
