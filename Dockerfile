@@ -16,5 +16,6 @@ RUN chown -R scrobbler:appgroup /app
 USER scrobbler
 
 EXPOSE 8000
+CMD ["ls", "-l", "/app"]
 
 CMD ["/app/.venv/bin/fastapi", "run", "src/plex_lastfm_now_playing/main.py", "--proxy-headers", "--port", "8000"]
