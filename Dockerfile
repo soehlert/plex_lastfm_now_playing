@@ -6,6 +6,9 @@ RUN pip install uv
 RUN uv venv
 
 COPY pyproject.toml uv.lock* ./
+COPY src ./src
+RUN ls -la /app
+RUN ls -la /app/src
 RUN . .venv/bin/activate && uv pip install -e .
 
 RUN groupadd --gid 1001 appgroup && \
@@ -16,6 +19,5 @@ RUN chown -R scrobbler:appgroup /app
 USER scrobbler
 
 EXPOSE 8000
-CMD ["ls", "-l", "/app"]
 
 CMD ["/app/.venv/bin/fastapi", "run", "src/plex_lastfm_now_playing/main.py", "--proxy-headers", "--port", "8000"]
