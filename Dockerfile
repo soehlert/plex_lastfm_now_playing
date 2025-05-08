@@ -17,4 +17,4 @@ USER scrobbler
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/fastapi", "run", "app/src/plex_lastfm_now_playing/main.py", "--proxy-headers", "--port", "8000"]
+CMD ["/app/.venv/bin/fastapi", "run", "src/plex_lastfm_now_playing/main.py", "--proxy-headers", "--port", "8000"]
