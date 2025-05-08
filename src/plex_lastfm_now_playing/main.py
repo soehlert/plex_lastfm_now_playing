@@ -7,6 +7,8 @@ from fastapi import FastAPI, Form, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 from typing import Any
 
+from starlette.responses import JSONResponse
+
 from .plex_lastfm_now_playing import LastFmUpdater, PlexWebhookHandler
 from .models import (
     AuthResponse,
@@ -88,7 +90,8 @@ async def setup_lastfm():
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/setup/lastfm/complete", response_model=SessionKeyResponse)
+
+@app.get("/setup/lastfm/complete", response_model=JSONResponse)
 async def complete_lastfm_setup(username: str = Query(..., description="Your Last.fm username")):
     """Complete the Last.fm authentication process."""
     lastfm_updater = app_state.get("lastfm_updater")
@@ -105,6 +108,7 @@ async def complete_lastfm_setup(username: str = Query(..., description="Your Las
         }
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/setup", response_class=HTMLResponse)
 async def setup_page():
