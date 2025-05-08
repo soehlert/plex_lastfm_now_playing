@@ -18,4 +18,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "src.plex_lastfm_now_playing.main:app", "--bind", "0.0.0.0:8000"]
+CMD ["/app/.venv/bin/uvicorn", "src.plex_lastfm_now_playing.main:app", "--bind", "0.0.0.0:8000"]
