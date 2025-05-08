@@ -18,4 +18,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/uvicorn", "src.plex_lastfm_now_playing.main:app", "--bind", "0.0.0.0:8000"]
+CMD ["fastapi", "run", "app/main.py", "--proxy-headers", "--port", "80"]
