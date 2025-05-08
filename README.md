@@ -13,7 +13,7 @@ The application is configured using environment variables. You will need to gath
 *   **`LASTFM_PASSWORD_HASH`**: The MD5 hash of your Last.fm password. **Do not use your plain password.** You can generate an MD5 hash using command-line tools:
     *   Linux/macOS: `echo -n "yourpassword" | md5sum` (or `md5`)
 *   **`UPDATE_INTERVAL_SECONDS`**: An optional override of the default (60) second time to update Last.FM
-*   **`PAUSE_TIMEOUT_SECONDS`: An optional override of the default (10) second time before a pause is considered a stop
+*   **`PAUSE_TIMEOUT_SECONDS`**: An optional override of the default (10) second time before a pause is considered a stop
 
 ## Installation and Running
 
