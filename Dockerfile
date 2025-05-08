@@ -17,4 +17,4 @@ USER scrobbler
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "plex_lastfm_now_playing.plex_lastfm_now_playing:app", "--bind", "0.0.0.0:8000"]
+CMD ["/app/.venv/bin/gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "src.plex_lastfm_now_playing:app", "--bind", "0.0.0.0:8000"]
