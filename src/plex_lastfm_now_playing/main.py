@@ -99,9 +99,8 @@ async def complete_lastfm_setup(username: str = Query(..., description="Your Las
         raise HTTPException(status_code=400, detail="Last.fm updater is not in setup mode")
 
     try:
-        session_key = await lastfm_updater.complete_auth(username)
+        await lastfm_updater.complete_auth(username)
         return {
-            "session_key": session_key,
             "message": "Authentication successful!"
         }
     except ValueError as e:
@@ -141,8 +140,6 @@ async def setup_page():
 
             <div id="result" style="display:none; margin-top: 20px;">
                 <h2>Setup Complete!</h2>
-                <p>Your session key is: <strong id="sessionKey"></strong></p>
-                <p>Please save this key in your environment as <code>LASTFM_SESSION_KEY</code>.</p>
             </div>
 
             <script>
@@ -173,7 +170,6 @@ async def setup_page():
                         const data = await response.json();
 
                         // Show the result
-                        document.getElementById('sessionKey').textContent = data.session_key;
                         document.getElementById('result').style.display = 'block';
                     } catch (error) {
                         alert('Error completing authentication: ' + error);

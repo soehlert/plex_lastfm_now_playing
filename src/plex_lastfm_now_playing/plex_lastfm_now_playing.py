@@ -116,6 +116,8 @@ class LastFmUpdater:
 
         # Get the path to the .env file (assuming it's in the project root)
         env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+        logger.info("env path: %s", env_path)
+        logger.info("Session key: %s", session_key)
 
         # Read the current contents of the .env file
         if os.path.exists(env_path):
