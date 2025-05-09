@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="Plex Last.fm Now Playing Scrobbler")
 
-app.add_exception_handler(LastFmConfigError, lastfm_config_exception_handler)
+app.add_exception_handler(LastFMConfigError, lastfm_config_exception_handler)
 
 
 @app.post("/webhook")
