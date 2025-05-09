@@ -156,7 +156,7 @@ Once the application is running (either via Docker or systemd), you need to conf
 2. Click Add Webhook.
 3. Enter the URL where your plex-lastfm-now-playing application is listening. Eg:
     ```bash
-    https://10.10.10.10:8000/webhook
+    http://10.10.10.10:8000/webhook
     ```
 4. Save the webhook.
 
