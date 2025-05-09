@@ -105,6 +105,7 @@ ignore = [
 ]
 "tests/*" = [
   "INP001",
+  "E402", # need to override settings before other imports
   "ANN001",
   "ANN202",
   "SLF001", # private method accessed

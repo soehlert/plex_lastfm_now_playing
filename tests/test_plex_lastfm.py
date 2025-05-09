@@ -5,12 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from plex_lastfm_now_playing.models import PlexMetadata, PlexWebhookPayload
-from plex_lastfm_now_playing.plex_lastfm_now_playing import (
-    LastFmUpdater,
-    PlexWebhookHandler,
-)
-
 os.environ["LASTFM_USERNAME"] = "test_user"
 os.environ["LASTFM_API_KEY"] = "test_api_key"
 os.environ["LASTFM_API_SECRET"] = "test_api_secret"
@@ -18,6 +12,12 @@ os.environ["LASTFM_SESSION_KEY"] = "test_session_key"
 os.environ["PLEX_WEBHOOK_PATH"] = "/webhook"
 os.environ["NOW_PLAYING_UPDATE_INTERVAL"] = "60"
 os.environ["PAUSE_TIMEOUT_SECONDS"] = "300"
+
+from plex_lastfm_now_playing.models import PlexMetadata, PlexWebhookPayload
+from plex_lastfm_now_playing.plex_lastfm_now_playing import (
+    LastFmUpdater,
+    PlexWebhookHandler,
+)
 
 
 @pytest.fixture()
