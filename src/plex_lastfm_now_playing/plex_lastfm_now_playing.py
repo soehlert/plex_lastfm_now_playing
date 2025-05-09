@@ -1,6 +1,7 @@
-"""Scrobble now playing info from Plex to Last.fm"""
+"""Scrobble now playing info from Plex to Last.fm."""
 
 import asyncio
+import contextlib
 import logging.config
 from pathlib import Path
 from typing import Any
@@ -34,16 +35,11 @@ class LastFmUpdater:
 
             if not all([api_key, api_secret, username]):
                 self.setup_mode = True
-                logger.exception("Missing Last.fm credentials in environment variables.")
-                raise ValueError("Missing Last.fm credentials in environment variables.")
 
             # Attempt to authenticate and initialize self.network otherwise fall back into set up mode
             if session_key and username:
                 self.network = pylast.LastFMNetwork(
-                    api_key=api_key,
-                    api_secret=api_secret,
-                    username=username,
-                    session_key=session_key
+                    api_key=api_key, api_secret=api_secret, username=username, session_key=session_key
                 )
                 self.network.enable_caching()
                 logger.info("Last.fm network initialized for user %s using session key.", username)
@@ -52,36 +48,35 @@ class LastFmUpdater:
                 self.setup_mode = True
                 # This is enough for pylast to request an authentication token later,
                 # but not enough to make authenticated calls like scrobbling.
-                self.network = pylast.LastFMNetwork(
-                    api_key=api_key,
-                    api_secret=api_secret
-                )
-        except (pylast.WSError, pylast.NetworkError, ValueError) as e:
-            logger.exception("Failed to initialize Last.fm network: %s", e)
+                self.network = pylast.LastFMNetwork(api_key=api_key, api_secret=api_secret)
+        except (pylast.WSError, pylast.NetworkError, ValueError):
+            logger.exception("Failed to initialize Last.fm network")
             self.network = None
 
     def is_ready(self) -> bool:
         """Check if the Last.fm updater is ready for normal operation."""
         return self.network is not None and not self.setup_mode
 
-    def generate_auth_url(self, network) -> tuple[SessionKeyGenerator, str]:
+    def generate_auth_url(self, network: pylast.LastFMNetwork) -> tuple[SessionKeyGenerator, str]:
         """Generate an authentication token and URL for Last.fm authorization."""
         if not self.setup_mode or not self.network:
-            raise ValueError("Not in setup mode or network not initialized")
+            msg = "Not in setup mode or network not initialized"
+            raise ValueError(msg)
 
         try:
             self.skg = pylast.SessionKeyGenerator(network)
             self.setup_url = self.skg.get_web_auth_url()
-
-            return self.skg, self.setup_url
         except (pylast.WSError, pylast.NetworkError) as e:
-            logger.exception("Failed to generate auth token: %s", e)
-            raise ValueError(f"Failed to generate auth token: {e}")
+            msg = f"Failed to generate auth token: {e}"
+            raise ValueError(msg) from e
+        else:
+            return self.skg, self.setup_url
 
     async def complete_auth(self, username: str) -> str:
         """Complete the authentication process and get a session key."""
         if not self.setup_mode or not self.network:
-            raise ValueError("Not in setup mode, network not initialized, or no token generated")
+            msg = "Not in setup mode, network not initialized, or no token generated"
+            raise ValueError(msg)
 
         session_key = self.skg.get_web_auth_session_key(self.setup_url)
 
@@ -91,7 +86,7 @@ class LastFmUpdater:
                 api_key=settings.LASTFM_API_KEY,
                 api_secret=settings.LASTFM_API_SECRET,
                 username=settings.LASTFM_USERNAME,
-                session_key=session_key
+                session_key=session_key,
             )
             self.network.enable_caching()
 
@@ -102,15 +97,15 @@ class LastFmUpdater:
             self._update_env_file(session_key, username)
 
             logger.info("Last.fm authentication completed successfully for user %s", settings.LASTFM_USERNAME)
-            return session_key
         except (pylast.WSError, pylast.NetworkError) as e:
-            logger.exception("Failed to complete authentication: %s", e)
-            raise ValueError(f"Failed to complete authentication: {e}")
+            msg = f"Failed to complete authentication: {e}"
+            raise ValueError(msg) from e
+        else:
+            return session_key
 
     @staticmethod
     def _update_env_file(session_key: str, username: str) -> None:
         """Update the .env file with the new session key and username."""
-
         # Get the path to the .env file (assuming it's in the project root)
         env_path = Path.cwd() / "lastfm-data" / ".env"
 
@@ -142,10 +137,9 @@ class LastFmUpdater:
             env_path.write_text("".join(lines))
 
             logger.info("Updated .env file with Last.fm session key and username.")
-        except (IOError, PermissionError) as e:
-            error_msg = f"ERROR: Cannot write Last.fm session key to {env_path}. Please fix permissions: {str(e)}"
-            logger.error(error_msg)
-            raise LastFMConfigError(error_msg)
+        except (OSError, PermissionError) as e:
+            error_msg = f"ERROR: Cannot write Last.fm session key to {env_path}. Please fix permissions: {e!s}"
+            raise LastFMConfigError(error_msg) from e
 
     async def update_now_playing(
         self, artist: str, title: str, album: str | None = None, album_artist: str | None = None
@@ -166,15 +160,15 @@ class LastFmUpdater:
                 album_artist=album_artist,
             )
             logger.debug("Successfully updated Now Playing on Last.fm.")
-        except (pylast.WSError, pylast.NetworkError, pylast.MalformedResponseError) as e:
-            logger.error("Failed to update Last.fm Now Playing: %s", e, exc_info=True)
+        except (pylast.WSError, pylast.NetworkError, pylast.MalformedResponseError):
+            logger.exception("Failed to update Last.fm Now Playing")
 
 
 class PlexWebhookHandler:
     """Manage state and logic for processing Plex webhooks and updating Last.fm."""
 
     def __init__(self, lastfm_updater: LastFmUpdater) -> None:
-        """Initializes the Plex webhook handler."""
+        """Initialize the Plex webhook handler."""
         self.lastfm_updater: LastFmUpdater = lastfm_updater
         self._lock = asyncio.Lock()
         self._current_track_key: str | None = None
@@ -184,29 +178,29 @@ class PlexWebhookHandler:
 
     @staticmethod
     def _generate_track_key(metadata: PlexMetadata) -> str | None:
-        """Generates a simple key to identify a track."""
-
+        """Generate a simple key to identify a track."""
         # Use artist and title as the key. Fall back to parentStudio (often artist for compilations), then just title.
         if metadata.grandparentTitle and metadata.title:
             return f"{metadata.grandparentTitle}_{metadata.title}"
-        elif metadata.parentStudio and metadata.title:
+        if metadata.parentStudio and metadata.title:
             return f"{metadata.parentStudio}_{metadata.title}"
-        elif metadata.title:
-             return f"_{metadata.title}"
+        if metadata.title:
+            return f"_{metadata.title}"
         return None
+
+    async def shutdown(self, reason: str) -> None:
+        """Gracefully shutdown the handler and stop any running tasks."""
+        await self._stop_periodic_update(reason=reason)
 
     async def _stop_periodic_update(self, reason: str) -> None:
         """Stop the periodic now playing update task and clear state."""
         async with self._lock:
-            if self._now_playing_task:
-                if not self._now_playing_task.done():
-                    self._now_playing_task.cancel()
-                    logger.info("Cancelled periodic Now Playing task. Reason: %s", reason)
-                    # Allow cancellation to propagate
-                    try:
-                        await asyncio.wait_for(self._now_playing_task, timeout=1.0)
-                    except (asyncio.CancelledError, asyncio.TimeoutError):
-                        pass # Expected exceptions on cancellation/timeout
+            if self._now_playing_task and not self._now_playing_task.done():
+                self._now_playing_task.cancel()
+                logger.info("Cancelled periodic Now Playing task. Reason: %s", reason)
+                # Allow cancellation to propagate
+                with contextlib.suppress(TimeoutError, asyncio.CancelledError):
+                    await asyncio.wait_for(self._now_playing_task, timeout=1.0)
 
             self._now_playing_task = None
             self._current_track_key = None
@@ -222,12 +216,12 @@ class PlexWebhookHandler:
             logger.debug("Cancelled pause timer.")
 
     async def _handle_pause_timeout(self) -> None:
-        """Called after PAUSE_TIMEOUT_SECONDS; stops updates if still paused."""
+        """Stop updates if still paused."""
         logger.info("Pause timer expired. Stopping periodic updates.")
         await self._stop_periodic_update(reason="Pause timeout")
 
     async def _periodic_update_loop(self) -> None:
-        """The core loop that periodically sends now playing updates."""
+        """Define the core loop that periodically sends now playing updates."""
         try:
             while True:
                 # Lock is acquired before starting the loop in process_webhook
@@ -239,96 +233,94 @@ class PlexWebhookHandler:
                     # Copy details to a local var while we hold the lock
                     details = self._current_track_details
 
-                logger.debug("Periodic update loop: Sending update for %s", details.get('title', 'N/A'))
+                logger.debug("Periodic update loop: Sending update for %s", details.get("title", "N/A"))
                 await self.lastfm_updater.update_now_playing(
-                    artist=details['artist'],
-                    title=details['title'],
-                    album=details.get('album'),
-                    album_artist=details.get('album_artist'),
+                    artist=details["artist"],
+                    title=details["title"],
+                    album=details.get("album"),
+                    album_artist=details.get("album_artist"),
                 )
                 await asyncio.sleep(settings.UPDATE_INTERVAL_SECONDS)
-        except asyncio.CancelledError:
-            logger.info("Periodic update loop cancelled.")
-            # Perform any cleanup if needed upon cancellation
-        except Exception as e:
-            logger.exception("Error in periodic update loop: %s. Stopping loop.", e)
-            await self._stop_periodic_update(reason="Exception in loop")
+        except (KeyError, asyncio.CancelledError, ConnectionError, ValueError) as e:
+            await self._stop_periodic_update(reason=f"{type(e).__name__}: {e}")
         finally:
             logger.debug("Periodic update loop finished.")
 
     async def process_webhook(self, payload: PlexWebhookPayload) -> None:
-        """Processes the incoming webhook payload."""
+        """Process the incoming webhook payload."""
         event = payload.event
         metadata = payload.Metadata
         logger.debug("Processing webhook event: %s", event)
 
         if event in ["media.play", "media.resume"]:
-            if not metadata or not metadata.title or not (metadata.grandparentTitle or metadata.parentStudio):
-                logger.warning("Received 'media.play' event with missing metadata. Skipping.")
-                return
-
-            artist = metadata.grandparentTitle or metadata.parentStudio  # Prefer grandparentTitle
-            title = metadata.title
-            album = metadata.parentTitle
-            track_key = self._generate_track_key(metadata)
-
-            if not track_key:
-                 logger.warning("Could not generate track key for 'media.play'. Skipping.")
-                 return
-
-            async with self._lock:
-                # Cancel any pending pause timer immediately on play/resume
-                self._cancel_pause_timer_internal()
-
-                # Check if it's the same track resuming vs a new track
-                if self._current_track_key == track_key and self._now_playing_task and not self._now_playing_task.done():
-                    logger.info("Resuming periodic updates for already playing track: %s", title)
-                    return
-
-                # New Track or Restart after Stop
-                logger.info("Received 'media.play' for new track: Artist=%s, Title=%s", artist, title)
-
-                # Stop any previous update task before starting a new one
-                if self._now_playing_task:
-                    if not self._now_playing_task.done():
-                         self._now_playing_task.cancel()
-                    # Kill the last song's loop immediately while we have the lock
-                    self._now_playing_task = None
-                    logger.info("Previous Now Playing task cancelled because we're playing a new song.")
-
-                # Store details for the new track
-                self._current_track_key = track_key
-                self._current_track_details = {
-                    "artist": artist,
-                    "title": title,
-                    "album": album,
-                    "album_artist": artist,
-                }
-
-                # Send the initial now playing update
-                await self.lastfm_updater.update_now_playing(
-                    artist=artist, title=title, album=album, album_artist=artist
-                )
-
-                logger.info("Starting periodic Now Playing task for: %s", title)
-                self._now_playing_task = asyncio.create_task(self._periodic_update_loop())
+            await self._handle_play_event(metadata)
         elif event == "media.pause":
-            async with self._lock:
-                # Only start a pause timer if we are currently tracking a song
-                if self._now_playing_task and not self._now_playing_task.done() and not self._pause_timer_handle:
-                    logger.info("Received 'media.pause'. Starting %s sec timeout.", settings.PAUSE_TIMEOUT_SECONDS)
-                    loop = asyncio.get_running_loop()
-                    self._pause_timer_handle = loop.call_later(
-                        settings.PAUSE_TIMEOUT_SECONDS,
-                        lambda: asyncio.create_task(self._handle_pause_timeout())
-                    )
-                elif self._pause_timer_handle:
-                     logger.debug("Received 'media.pause' but pause timer already active.")
-                else:
-                     logger.debug("Received 'media.pause' but no active Now Playing task.")
+            await self._handle_pause_event()
         elif event == "media.stop":
-            logger.info("Received 'media.stop'. Stopping periodic updates.")
-            # Stop immediately, no timeout needed. _stop_periodic_update handles the lock.
-            await self._stop_periodic_update(reason="media.stop event")
+            await self._handle_stop_event()
         else:
             logger.debug("Ignoring irrelevant event: %s", event)
+
+    async def _handle_play_event(self, metadata: PlexMetadata | None) -> None:
+        """Handle media.play and media.resume events."""
+        if not metadata or not metadata.title or not (metadata.grandparentTitle or metadata.parentStudio):
+            logger.warning("Received 'media.play' event with missing metadata. Skipping.")
+            return
+
+        artist = metadata.grandparentTitle or metadata.parentStudio
+        title = metadata.title
+        album = metadata.parentTitle
+        track_key = self._generate_track_key(metadata)
+
+        if not track_key:
+            logger.warning("Could not generate track key for 'media.play'. Skipping.")
+            return
+
+        async with self._lock:
+            # Cancel any pending pause timer immediately on play/resume
+            self._cancel_pause_timer_internal()
+
+            # Check if it's the same track resuming
+            if self._current_track_key == track_key and self._now_playing_task and not self._now_playing_task.done():
+                logger.info("Resuming periodic updates for already playing track: %s", title)
+                return
+
+            logger.info("Received 'media.play' for new track: Artist=%s, Title=%s", artist, title)
+
+            if self._now_playing_task:
+                if not self._now_playing_task.done():
+                    self._now_playing_task.cancel()
+                self._now_playing_task = None
+                logger.info("Previous Now Playing task cancelled because we're playing a new song.")
+
+            self._current_track_key = track_key
+            self._current_track_details = {
+                "artist": artist,
+                "title": title,
+                "album": album,
+                "album_artist": artist,
+            }
+
+            await self.lastfm_updater.update_now_playing(artist=artist, title=title, album=album, album_artist=artist)
+
+            logger.debug("Starting periodic Now Playing task for: %s", title)
+            self._now_playing_task = asyncio.create_task(self._periodic_update_loop())
+
+    async def _handle_pause_event(self) -> None:
+        """Handle media.pause event."""
+        async with self._lock:
+            if self._now_playing_task and not self._now_playing_task.done() and not self._pause_timer_handle:
+                logger.debug("Received 'media.pause'. Starting %s sec timeout.", settings.PAUSE_TIMEOUT_SECONDS)
+                loop = asyncio.get_running_loop()
+                self._pause_timer_handle = loop.call_later(
+                    settings.PAUSE_TIMEOUT_SECONDS, lambda: asyncio.create_task(self._handle_pause_timeout())
+                )
+            elif self._pause_timer_handle:
+                logger.debug("Received 'media.pause' but pause timer already active.")
+            else:
+                logger.debug("Received 'media.pause' but no active Now Playing task.")
+
+    async def _handle_stop_event(self) -> None:
+        """Handle media.stop event."""
+        logger.info("Received 'media.stop'. Stopping periodic updates.")
+        await self._stop_periodic_update(reason="media.stop event")

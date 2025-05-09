@@ -1,9 +1,12 @@
 """Define fastAPI endpoints."""
+
 import json
 import logging.config
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
+import pydantic
 from fastapi import FastAPI, Form, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 
@@ -17,10 +20,10 @@ logging.basicConfig(level=logging.INFO)
 # Global instances (managed by lifespan context)
 app_state: dict[str, Any] = {}
 
-# noinspection PyUnusedLocal,PyShadowingNames
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manages application startup and shutdown logic."""
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
+    """Manage application startup and shutdown logic."""
     logger.info("Application startup")
     # Create instances needed for the application lifetime
     app_state["lastfm_updater"] = LastFmUpdater()
@@ -30,7 +33,7 @@ async def lifespan(app: FastAPI):
     handler = app_state.get("webhook_handler")
     if handler:
         # Gracefully stop any running background task on shutdown
-        await handler._stop_periodic_update(reason="Application shutdown")
+        await PlexWebhookHandler.shutdown(reason="Application shutdown")
     logger.info("Cleanup complete.")
 
 
@@ -40,7 +43,7 @@ app.add_exception_handler(LastFMConfigError, lastfm_config_exception_handler)
 
 
 @app.post("/webhook")
-async def plex_webhook_endpoint(payload: str = Form(...)):
+async def plex_webhook_endpoint(payload: str = Form(...)) -> dict[str, str]:
     """Receives webhooks from Plex Media Server."""
     webhook_handler = app_state.get("webhook_handler")
     if not webhook_handler:
@@ -51,26 +54,26 @@ async def plex_webhook_endpoint(payload: str = Form(...)):
         data = json.loads(payload)
         logger.info("Received webhook payload: %s", data)
         parsed_payload = PlexWebhookPayload.model_validate(data)
-    except json.JSONDecodeError:
-        logger.error("Failed to decode JSON from payload: %s", payload)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload")
-    except Exception:  # Catch Pydantic validation errors etc.
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload structure")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload") from e
+    except (pydantic.ValidationError, TypeError, ValueError) as e:  # Catch specific errors
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload structure") from e
 
     try:
         await webhook_handler.process_webhook(parsed_payload)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error processing webhook")
-
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid data: {e!s}") from e
     return {"message": "Webhook received"}
 
+
 @app.get("/health")
-async def health_check():
-    """Simple health check endpoint."""
+async def health_check() -> dict[str, str]:
+    """Check health."""
     return {"status": "ok"}
 
+
 @app.get("/setup/lastfm", response_model=AuthResponse)
-async def setup_lastfm():
+async def setup_lastfm() -> AuthResponse | dict[str, str]:
     """Start the Last.fm authentication process."""
     lastfm_updater = app_state.get("lastfm_updater")
     if not lastfm_updater:
@@ -81,16 +84,17 @@ async def setup_lastfm():
 
     try:
         _, auth_url = lastfm_updater.generate_auth_url(lastfm_updater.network)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
         return {
             "auth_url": auth_url,
-            "message": "Please visit this URL to authorize the application, then return to /setup/lastfm/complete"
+            "message": "Please visit this URL to authorize the application, then return to /setup/lastfm/complete",
         }
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/setup/lastfm/complete")
-async def complete_lastfm_setup(username: str = Query(..., description="Your Last.fm username")):
+async def complete_lastfm_setup(username: str = Query(..., description="Your Last.fm username")) -> dict[str, str]:
     """Complete the Last.fm authentication process."""
     lastfm_updater = app_state.get("lastfm_updater")
     if not lastfm_updater:
@@ -101,15 +105,14 @@ async def complete_lastfm_setup(username: str = Query(..., description="Your Las
 
     try:
         await lastfm_updater.complete_auth(username)
-        return {
-            "message": "Authentication successful!"
-        }
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    else:
+        return {"message": "Authentication successful!"}
 
 
 @app.get("/setup", response_class=HTMLResponse)
-async def setup_page():
+async def setup_page() -> str:
     """Provide a simple HTML interface for the setup process."""
     lastfm_updater = app_state.get("lastfm_updater")
     if not lastfm_updater or not lastfm_updater.setup_mode:
@@ -182,7 +185,9 @@ async def setup_page():
     </html>
     """
 
+
 if __name__ == "__main__":
     import uvicorn
+
     logger.info("Starting Uvicorn server...")
     uvicorn.run(app, host="::", port=8000)

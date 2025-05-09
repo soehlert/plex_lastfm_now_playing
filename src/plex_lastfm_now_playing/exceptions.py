@@ -1,13 +1,14 @@
-""" Define custom exceptions."""
+"""Define custom exceptions."""
+
 from fastapi.responses import HTMLResponse
 
 
 class LastFMConfigError(Exception):
     """Critical error in Last.fm configuration that requires user attention."""
-    pass
 
 
-async def lastfm_config_exception_handler(request, exc):
+async def lastfm_config_exception_handler(exc: Exception) -> HTMLResponse:
+    """Define custom exception handler."""
     return HTMLResponse(
         content=f"""
         <html>
@@ -15,8 +16,8 @@ async def lastfm_config_exception_handler(request, exc):
                 <title>Last.fm Configuration Error</title>
                 <style>
                     body {{ font-family: Arial, sans-serif; padding: 20px; }}
-                    .error-container {{ 
-                        background-color: #ffdddd; 
+                    .error-container {{
+                        background-color: #ffdddd;
                         border-left: 6px solid #f44336;
                         padding: 15px;
                         margin-bottom: 15px;
@@ -27,11 +28,11 @@ async def lastfm_config_exception_handler(request, exc):
             <body>
                 <div class="error-container">
                     <h1>Last.fm Configuration Error</h1>
-                    <p>{str(exc)}</p>
+                    <p>{exc!s}</p>
                     <p>Please fix this issue and restart the application.</p>
                 </div>
             </body>
         </html>
         """,
-        status_code=500
+        status_code=500,
     )
