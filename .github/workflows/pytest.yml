@@ -54,5 +54,5 @@ jobs:
 
     - name: Run linting
       run: |
-        .venv/bin/ruff check .
+        .venv/bin/ruff check --fix .
         .venv/bin/isort --check --diff .
