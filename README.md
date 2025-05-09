@@ -24,7 +24,7 @@ There is a guided set up upon first start. You can access it by going to http://
 2. You need to click that link and accept the application in last.fm. 
 3. Once you've done that, go back to this site and it will ask you for your last.fm username; submit. 
 4. (This part is invisible to you - it happens behind the scenes) Once you complete that, it grabs a session key and stores it
-for you in a .env file in the volume specified in your docker compose file or in the path `$currentWorkingDirectory/lastfm-data/.env`
+for you in a .env file in the volume specified in your docker compose file or in the path `$currentWorkingDirectory/lastfm-data/.env` NOTE: This file must be writeable on the host from Docker or your user running via systemd.
 
 5. From now on (even after restarts), it will use your session key to authenticate you in a way that allows you to scrobble 
 (the API_KEY and API_SECRET alone will not give you write permissions)
@@ -156,9 +156,9 @@ Once the application is running (either via Docker or systemd), you need to conf
 2. Click Add Webhook.
 3. Enter the URL where your plex-lastfm-now-playing application is listening. Eg:
     ```bash
-    https://10.10.10.1:8000/webhook
+    https://10.10.10.10:8000/webhook
     ```
 4. Save the webhook.
 
-Plex will now send notifications to your application when media playback starts, stops, or pauses.
+Plex will now send notifications to your application when media playback starts, resumes, stops, or pauses (among others - you can ignore them).
 
