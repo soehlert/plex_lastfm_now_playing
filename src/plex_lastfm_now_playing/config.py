@@ -1,6 +1,7 @@
 """Set up configuration variables."""
 
 import logging
+import pathlib
 from pathlib import Path
 from pydantic_settings import BaseSettings
 
@@ -24,6 +25,6 @@ class Settings(BaseSettings):
 
     class Config:
         """Define our settings file."""
-        env_file = "lastfm-data/.env"
+        env_file = str(Path("lastfm-data/.env") if Path("lastfm-data/.env").exists() else Path(".env"))
 
 settings = Settings()
