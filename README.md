@@ -1,23 +1,33 @@
 # Plex Last.fm "Now Playing" Scrobbler
 [![Docker Build and Push to GHCR](https://github.com/soehlert/plex_lastfm_now_playing/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/soehlert/plex_lastfm_now_playing/actions/workflows/docker-publish.yml)
 
-This application listens for webhook events from your Plex Media Server and updates your Last.fm "Now Playing" status in real-time. The built in Plex scrobbler only scrobbles after the track is over, and some other attempts seem to time out halfway through a song. This should fix both of those problems.
+This application listens for webhook events from your Plex Media Server and updates your Last.fm "Now Playing" status in real-time. 
+The built in Plex scrobbler only scrobbles after the track is over, and some other attempts seem to time out halfway through a song. 
+This should fix both of those problems.
 
 ## Configuration
 
 The application is configured using environment variables. You will need to gather the following information:
 
 *   **`LASTFM_API_KEY`**: Your Last.fm API Key. You can get one from [Last.fm API Accounts](https://www.last.fm/api/account/create).
-*   **`LASTFM_API_SECRET`**: Your Last.fm API Shared Secret.
+*   **`LASTFM_API_SECRET`**: Your Last.fm API Shared Secret (you'll get it with the API_KEY).
 *   **`LASTFM_USERNAME`**: Your Last.fm username.
-*   **`LASTFM_PASSWORD_HASH`**: The MD5 hash of your Last.fm password. **Do not use your plain password.** You can generate an MD5 hash using command-line tools:
-    *   Linux/macOS: `echo -n "yourpassword" | md5sum` (or `md5`)
-*   **`UPDATE_INTERVAL_SECONDS`**: An optional override of the default (60) second time to update Last.FM
-*   **`PAUSE_TIMEOUT_SECONDS`**: An optional override of the default (10) second time before a pause is considered a stop
 
 ## Installation and Running
 
 You can run this application using Docker (amd64 or arm64) or as a systemd service on a Linux system.
+
+### Set Up
+There is a guided set up upon first start. You can access it by going to http://your-instance:8000/setup. 
+
+1. It will use your API_KEY and API_SECRET to get an auth url. 
+2. You need to click that link and accept the application in last.fm. 
+3. Once you've done that, it will ask you for your last.fm username. 
+4. (This part is invisible to you - it happens behind the scenes) Once you complete that, it grabs a session key and stores it
+for you in a .env file in the volume specified in your docker compose file or in the path `$currentWorkingDirectory/lastfm-data/.env`
+
+5. From now on (even after restarts), it will use your session key to authenticate you in a way that allows you to scrobble 
+(the API_KEY and API_SECRET alone will not give you write permissions)
 
 ### Method 1: Using Docker Compose (Recommended)
 
@@ -29,7 +39,7 @@ You can run this application using Docker (amd64 or arm64) or as a systemd servi
 
 1.  **Create a `docker-compose.yml` file:**
     Create a file named `docker-compose.yml` with the following content:
-
+    Note: The application stores Last.fm credentials and session data in a persistent volume. By default, data is stored in `/opt/homelab/traefik/lastfm-data` on the host. 
     ```yaml
     services:
       plex-lastfm-now-playing:
@@ -39,30 +49,29 @@ You can run this application using Docker (amd64 or arm64) or as a systemd servi
         ports:
             - "8000:8000"
         volumes:
-            - ./lastfm-data/.env:/app/.env
+            - ${LASTFM_DATA_PATH:-/opt/homelab/traefik/lastfm-data}:/app/lastfm-data
         # Set up to read env vars from portainer
         environment:
-            - LASTFM_API_KEY=${LAST_API_KEY}
+            - LASTFM_API_KEY=${LASTFM_API_KEY}
             - LASTFM_API_SECRET=${LASTFM_API_SECRET}
             - LASTFM_USERNAME=${LASTFM_USERNAME}
-            - LASTFM_PASSWORD_HASH=${LASTFM_PASSWORD_HASH}
-            # Override if you want
-            - UPDATE_INTERVAL_SECONDS=${UPDATE_INTERVAL_SECONDS}  # defaults to 60 seconds
-            - PAUSE_TIMEOUT_SECONDS=${PAUSE_TIMEOUT_SECONDS} # how long until the pause is considered a stop - default 10s
-        # Uncomment envfile stuff if you want to use that instead of the individual env vars
-        #env_file:
-        #    - ./lastfm-data/.env
+        # Optionally use an env file instead of vars in portainer
+        # env_file:
+          # - .env
     ```
     Optional env_file:
 
     ```yaml
+    LASTFM_DATA_PATH=path on the host of your .env file
     LASTFM_API_KEY=your_lastfm_api_key_here
     LASTFM_API_SECRET=your_lastfm_api_secret_here
     LASTFM_USERNAME=your_lastfm_username_here
     LASTFM_PASSWORD_HASH=your_md5_password_hash_here
-    # Override if you want
+    # Optional to override defaults
     UPDATE_INTERVAL_SECONDS=some_sort_of_integer_seconds
     PAUSE_TIMEOUT_SECONDS=some_sort_of_integer_seconds
+    APP_PORT=8000
+    LOG_LEVEL="INFO"
     ```
 2. **Start the application:**
    Open a terminal in the directory where you created the docker-compose.yml file and run:
@@ -78,7 +87,7 @@ Prerequisites:
 * Python 3.12+
 * uv - [installer](https://docs.astral.sh/uv/getting-started/installation/).
 * git
-* A dedicated user to run the application (recommended for security, e.g., scrobbler).
+* A dedicated user to run the application (recommended for security, e.g., `scrobbler`).
 
 Steps:
 

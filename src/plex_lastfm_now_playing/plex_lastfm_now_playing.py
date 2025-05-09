@@ -291,7 +291,7 @@ class PlexWebhookHandler:
                          self._now_playing_task.cancel()
                     # Kill the last song's loop immediately while we have the lock
                     self._now_playing_task = None
-                    logger.info("Previous Now Playing task cancelled for new track.")
+                    logger.info("Previous Now Playing task cancelled because we're playing a new song.")
 
                 # Store details for the new track
                 self._current_track_key = track_key
