@@ -50,7 +50,7 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        pytest tests/ -v --cov=plex_lastfm_now_playing --cov-report=xml
+        .venv/bin/pytest tests/ -v --cov=plex_lastfm_now_playing --cov-report=xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -61,5 +61,5 @@ jobs:
 
     - name: Run linting
       run: |
-        ruff check .
-        isort --check --diff .
+        .venv/bin/ruff check .
+        .venv/bin/isort --check --diff .
