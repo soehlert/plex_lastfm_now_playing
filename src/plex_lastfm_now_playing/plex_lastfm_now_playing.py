@@ -259,7 +259,7 @@ class PlexWebhookHandler:
         metadata = payload.Metadata
         logger.debug("Processing webhook event: %s", event)
 
-        if event == "media.play":
+        if event in ["media.play", "media.resume"]:
             if not metadata or not metadata.title or not (metadata.grandparentTitle or metadata.parentStudio):
                 logger.warning("Received 'media.play' event with missing metadata. Skipping.")
                 return
