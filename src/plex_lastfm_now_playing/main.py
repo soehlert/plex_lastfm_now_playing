@@ -53,7 +53,7 @@ async def plex_webhook_endpoint(payload: str = Form(...)):
 
     try:
         data = json.loads(payload)
-        logger.debug("Received webhook payload: %s", data)
+        logger.info("Received webhook payload: %s", data)
         parsed_payload = PlexWebhookPayload.model_validate(data)
     except json.JSONDecodeError:
         logger.error("Failed to decode JSON from payload: %s", payload)

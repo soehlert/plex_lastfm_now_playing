@@ -1,6 +1,11 @@
 """Set up configuration variables."""
 
+import logging
+from pathlib import Path
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class Settings(BaseSettings):
     """Define the settings we need."""

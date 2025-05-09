@@ -30,20 +30,6 @@ class LastFmUpdater:
         self.skg = None
         self.setup_url = None
 
-        import os
-        print(f"Current working directory: {os.getcwd()}")
-        print(f"Files in current directory: {os.listdir('.')}")
-        print(
-            f"Files in lastfm-data: {os.listdir('lastfm-data') if os.path.exists('lastfm-data') else 'Directory not found'}")
-        print(f"Absolute path check: {os.path.exists('/app/lastfm-data/.env')}")
-
-        # Try to read the file directly
-        try:
-            with open('/app/lastfm-data/.env', 'r') as f:
-                print(f"File content: {f.read()}")
-        except Exception as e:
-            print(f"Error reading file: {e}")
-
         try:
             api_key = settings.LASTFM_API_KEY
             api_secret = settings.LASTFM_API_SECRET
