@@ -1,19 +1,15 @@
 """Define fastAPI endpoints."""
 import json
 import logging.config
-
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Form, HTTPException, Query, status
-from fastapi.responses import HTMLResponse
 from typing import Any
 
-from .exceptions import LastFMConfigError, lastfm_config_exception_handler
-from .models import (
-    AuthResponse,
-    PlexWebhookPayload,
-)
-from .plex_lastfm_now_playing import LastFmUpdater, PlexWebhookHandler
+from fastapi import FastAPI, Form, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
 
+from .exceptions import LastFMConfigError, lastfm_config_exception_handler
+from .models import AuthResponse, PlexWebhookPayload
+from .plex_lastfm_now_playing import LastFmUpdater, PlexWebhookHandler
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

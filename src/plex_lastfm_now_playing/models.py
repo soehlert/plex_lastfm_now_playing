@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel
 
+
 class PlexMetadata(BaseModel):
     """Represent metadata for the media item."""
     parentTitle: str | None = None  # Album artist

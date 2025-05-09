@@ -2,19 +2,15 @@
 
 import asyncio
 import logging.config
-import pylast
-
 from pathlib import Path
-from pylast import SessionKeyGenerator
 from typing import Any
+
+import pylast
+from pylast import SessionKeyGenerator
 
 from .config import settings
 from .exceptions import LastFMConfigError
-from .models import (
-    PlexMetadata,
-    PlexWebhookPayload,
-)
-
+from .models import PlexMetadata, PlexWebhookPayload
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
