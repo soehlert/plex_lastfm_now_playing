@@ -21,7 +21,6 @@ dependencies = [
 dev = [
   "ruff",
   "isort",
-  "pytest-timeout>=2.4.0",
   "pytest"
 ]
 
