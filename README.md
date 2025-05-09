@@ -22,7 +22,7 @@ There is a guided set up upon first start. You can access it by going to http://
 
 1. It will use your API_KEY and API_SECRET to get an auth url. 
 2. You need to click that link and accept the application in last.fm. 
-3. Once you've done that, it will ask you for your last.fm username. 
+3. Once you've done that, go back to this site and it will ask you for your last.fm username; submit. 
 4. (This part is invisible to you - it happens behind the scenes) Once you complete that, it grabs a session key and stores it
 for you in a .env file in the volume specified in your docker compose file or in the path `$currentWorkingDirectory/lastfm-data/.env`
 
