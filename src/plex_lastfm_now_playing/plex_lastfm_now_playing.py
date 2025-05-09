@@ -2,13 +2,14 @@
 
 import asyncio
 import logging.config
-import os
 import pylast
 
+from pathlib import Path
 from pylast import SessionKeyGenerator
 from typing import Any
 
 from .config import settings
+from .exceptions import LastFMConfigError
 from .models import (
     PlexMetadata,
     PlexWebhookPayload,
@@ -115,32 +116,33 @@ class LastFmUpdater:
         """Update the .env file with the new session key and username."""
 
         # Get the path to the .env file (assuming it's in the project root)
-        env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
-        logger.info("env path: %s", env_path)
-        logger.info("Session key: %s", session_key)
+        env_path = Path.cwd() / "lastfm-data" / ".env"
 
-        # Read the current contents of the .env file
-        if os.path.exists(env_path):
-            with open(env_path, "r") as f:
-                lines = f.readlines()
-        else:
-            lines = []
+        try:
+            env_path.parent.mkdir(parents=True, exist_ok=True)
 
-        session_key_found = False
+            if env_path.exists():
+                lines = env_path.read_text().splitlines(keepends=True)
+            else:
+                lines = []
 
-        for i, line in enumerate(lines):
-            if line.startswith("LASTFM_SESSION_KEY="):
-                lines[i] = f"LASTFM_SESSION_KEY={session_key}\n"
-                session_key_found = True
+            session_key_found = False
 
-        if not session_key_found:
-            lines.append(f"LASTFM_SESSION_KEY={session_key}\n")
+            for i, line in enumerate(lines):
+                if line.startswith("LASTFM_SESSION_KEY="):
+                    lines[i] = f"LASTFM_SESSION_KEY={session_key}\n"
+                    session_key_found = True
 
-        # Write the updated contents back to the .env file
-        with open(env_path, "w") as f:
-            f.writelines(lines)
+            if not session_key_found:
+                lines.append(f"LASTFM_SESSION_KEY={session_key}\n")
 
-        logger.info("Updated .env file with Last.fm session key.")
+            env_path.write_text("".join(lines))
+
+            logger.info("Updated .env file with Last.fm session key.")
+        except (IOError, PermissionError) as e:
+            error_msg = f"ERROR: Cannot write Last.fm session key to {env_path}. Please fix permissions: {str(e)}"
+            logger.error(error_msg)
+            raise LastFMConfigError(error_msg)
 
     async def update_now_playing(
         self, artist: str, title: str, album: str | None = None, album_artist: str | None = None

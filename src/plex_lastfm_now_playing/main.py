@@ -7,11 +7,13 @@ from fastapi import FastAPI, Form, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 from typing import Any
 
-from .plex_lastfm_now_playing import LastFmUpdater, PlexWebhookHandler
+from .exceptions import LastFMConfigError, lastfm_config_exception_handler
 from .models import (
     AuthResponse,
     PlexWebhookPayload,
 )
+from .plex_lastfm_now_playing import LastFmUpdater, PlexWebhookHandler
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -37,6 +39,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, title="Plex Last.fm Now Playing Scrobbler")
+
+app.add_exception_handler(LastFmConfigError, lastfm_config_exception_handler)
+
 
 @app.post("/webhook")
 async def plex_webhook_endpoint(payload: str = Form(...)):
