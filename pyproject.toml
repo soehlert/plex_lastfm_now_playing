@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "plex_lastfm_now_playing"
-version = "0.1.0"
+version = "0.5.0"
 description = "Scrobble now playing from Plex to Last.fm"
 authors = [{name = "Sam Oehlert"}]
 requires-python = ">=3.12"
@@ -16,6 +16,7 @@ dependencies = [
   "gunicorn>=23.0.0",
   "uvicorn>=0.34.2",
   "pydantic-settings>=2.9.1",
+  "pytest-timeout>=2.4.0",
 ]
 
 [project.optional-dependencies]
@@ -25,7 +26,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/plex_lastfm_now_playing"]
 
 [tool.ruff]
 target-version = "py312"
@@ -88,6 +89,7 @@ select = [
 ]
 
 ignore = [
+  "I", # Don't duplicate isort
   "D203",
   "D212",
   "COM812",
@@ -104,6 +106,10 @@ ignore = [
 ]
 "tests/*" = [
   "INP001",
+  "ANN001",
+  "ANN202",
+  "SLF001", # private method accessed
+  "S105", # Possible hardcoded password
   "ANN201", # Missing return type annotation for public function
   "S101", # Use of `assert` detected
   "PLR2004", # Magic value used in comparison, consider replacing * with a constant variable
@@ -118,4 +124,6 @@ convention = "google"
 [dependency-groups]
 dev = [
     "hatchling>=1.27.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
 ]
