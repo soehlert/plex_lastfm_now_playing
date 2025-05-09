@@ -41,7 +41,7 @@ class LastFmUpdater:
                 logger.exception("Missing Last.fm credentials in environment variables.")
                 raise ValueError("Missing Last.fm credentials in environment variables.")
 
-            # Attempt to authenticate and initialize self.network otherwise fall into set up mode
+            # Attempt to authenticate and initialize self.network otherwise fall back into set up mode
             if session_key and username:
                 self.network = pylast.LastFMNetwork(
                     api_key=api_key,
@@ -94,7 +94,7 @@ class LastFmUpdater:
             self.network = pylast.LastFMNetwork(
                 api_key=settings.LASTFM_API_KEY,
                 api_secret=settings.LASTFM_API_SECRET,
-                username=username,
+                username=settings.LASTFM_USERNAME,
                 session_key=session_key
             )
             self.network.enable_caching()
@@ -103,16 +103,16 @@ class LastFmUpdater:
             self.setup_mode = False
             self.setup_url = None
 
-            self._update_env_file(session_key)
+            self._update_env_file(session_key, username)
 
-            logger.info("Last.fm authentication completed successfully for user %s", username)
+            logger.info("Last.fm authentication completed successfully for user %s", settings.LASTFM_USERNAME)
             return session_key
         except (pylast.WSError, pylast.NetworkError) as e:
             logger.exception("Failed to complete authentication: %s", e)
             raise ValueError(f"Failed to complete authentication: {e}")
 
     @staticmethod
-    def _update_env_file(session_key: str) -> None:
+    def _update_env_file(session_key: str, username: str) -> None:
         """Update the .env file with the new session key and username."""
 
         # Get the path to the .env file (assuming it's in the project root)
@@ -127,18 +127,25 @@ class LastFmUpdater:
                 lines = []
 
             session_key_found = False
+            username_found = False
 
             for i, line in enumerate(lines):
                 if line.startswith("LASTFM_SESSION_KEY="):
                     lines[i] = f"LASTFM_SESSION_KEY={session_key}\n"
                     session_key_found = True
+                elif line.startswith("LASTFM_USERNAME="):
+                    lines[i] = f"LASTFM_USERNAME={username}\n"
+                    username_found = True
 
             if not session_key_found:
                 lines.append(f"LASTFM_SESSION_KEY={session_key}\n")
 
+            if not username_found:
+                lines.append(f"LASTFM_USERNAME={username}\n")
+
             env_path.write_text("".join(lines))
 
-            logger.info("Updated .env file with Last.fm session key.")
+            logger.info("Updated .env file with Last.fm session key and username.")
         except (IOError, PermissionError) as e:
             error_msg = f"ERROR: Cannot write Last.fm session key to {env_path}. Please fix permissions: {str(e)}"
             logger.error(error_msg)

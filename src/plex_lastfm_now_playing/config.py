@@ -16,11 +16,11 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     UPDATE_INTERVAL_SECONDS: int = 60
     PAUSE_TIMEOUT_SECONDS: int = 300
+    LASTFM_USERNAME: str = None
 
     # Required values (no defaults)
     LASTFM_API_KEY: str = None
     LASTFM_API_SECRET: str = None
-    LASTFM_USERNAME: str = None
     LASTFM_SESSION_KEY: str | None = None
 
     class Config:

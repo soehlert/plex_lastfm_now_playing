@@ -11,7 +11,6 @@ The application is configured using environment variables. You will need to gath
 
 *   **`LASTFM_API_KEY`**: Your Last.fm API Key. You can get one from [Last.fm API Accounts](https://www.last.fm/api/account/create).
 *   **`LASTFM_API_SECRET`**: Your Last.fm API Shared Secret (you'll get it with the API_KEY).
-*   **`LASTFM_USERNAME`**: Your Last.fm username.
 
 ## Installation and Running
 
@@ -54,7 +53,6 @@ for you in a .env file in the volume specified in your docker compose file or in
         environment:
             - LASTFM_API_KEY=${LASTFM_API_KEY}
             - LASTFM_API_SECRET=${LASTFM_API_SECRET}
-            - LASTFM_USERNAME=${LASTFM_USERNAME}
         # Optionally use an env file instead of vars in portainer
         # env_file:
           # - .env
@@ -65,8 +63,9 @@ for you in a .env file in the volume specified in your docker compose file or in
     LASTFM_DATA_PATH=path on the host of your .env file
     LASTFM_API_KEY=your_lastfm_api_key_here
     LASTFM_API_SECRET=your_lastfm_api_secret_here
+    # Optional as we will gather this during set up if it does not exist (you likely don't want to set these on your own)
     LASTFM_USERNAME=your_lastfm_username_here
-    LASTFM_PASSWORD_HASH=your_md5_password_hash_here
+    LASTFM_SESSION_KEY=your_session_key
     # Optional to override defaults
     UPDATE_INTERVAL_SECONDS=some_sort_of_integer_seconds
     PAUSE_TIMEOUT_SECONDS=some_sort_of_integer_seconds
@@ -108,7 +107,7 @@ Steps:
 
 4. **Install the application and its dependencies using uv**
     ```bash
-    uv sync
+    uv pip install -e .
     ```
 5. **Configure Environment Variables for systemd:**
 Create an environment file for the service. For example, at /etc/plex_lastfm_now_playing/config.env:
@@ -134,9 +133,8 @@ Create an environment file for the service. For example, at /etc/plex_lastfm_now
     Group=scrobbler
     WorkingDirectory=/usr/local/plex_lastfm_now_playing
     EnvironmentFile=/etc/plex_lastfm_now_playing/config.env
-    
-    ExecStart=/usr/local/plex_lastfm_now_playing/.venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker plex_lastfm_now_playing.plex_lastfm_now_playing:app --bind 0.0.0.0:8000
-    
+   
+    ExecStart=/usr/local/plex_lastfm_now_playing/.venv/bin/fastapi run src/plex_lastfm_now_playing/main.py --proxy-headers --port 8000
     Restart=always
     RestartSec=3
     
