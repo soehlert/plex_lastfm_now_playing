@@ -104,6 +104,7 @@ ignore = [
   "INP001", # File * is part of an implicit namespace package. Add an `__init__.py`.
 ]
 "tests/*" = [
+  "I", # Dont duplicate isort
   "INP001",
   "E402", # need to override settings before other imports
   "ANN001",
