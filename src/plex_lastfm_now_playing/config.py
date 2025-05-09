@@ -19,6 +19,6 @@ class Settings(BaseSettings):
 
     class Config:
         """Define our settings file."""
-        env_file = ".env"
+        env_file = "lastfm-data/.env"
 
 settings = Settings()
