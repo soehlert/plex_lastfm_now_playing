@@ -56,7 +56,7 @@ jobs:
       run: |
         source .venv/bin/activate
         .venv/bin/ruff config
-        .venv/bin/ruff check .
+        .venv/bin/ruff check --fix .
 
     - name: Run isort separately
       run: |
