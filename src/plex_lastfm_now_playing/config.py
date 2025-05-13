@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     # Default values
     APP_PORT: int = 8000
     LOG_LEVEL: str = "INFO"
-    UPDATE_INTERVAL_SECONDS: int = 60
-    PAUSE_TIMEOUT_SECONDS: int = 300
+    UPDATE_INTERVAL_SECONDS: int = 10
+    PAUSE_TIMEOUT_SECONDS: int = 60
     LASTFM_USERNAME: str = None
 
     # Required values (no defaults)
