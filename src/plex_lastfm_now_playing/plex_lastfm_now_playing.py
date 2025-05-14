@@ -309,7 +309,9 @@ class PlexWebhookHandler:
 
             if self._now_playing_task:
                 if not self._now_playing_task.done():
-                    await self._stop_periodic_update(reason="New song started playing")
+                    # immediately cancel the now playing task
+                    logger.info("Cancelling update loop for %s", self._current_track_key)
+                    self._now_playing_task.cancel()
                 self._now_playing_task = None
 
             self._current_track_key = track_key
