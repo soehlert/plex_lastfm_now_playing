@@ -209,7 +209,7 @@ class PlexWebhookHandler:
                 logger.info("Cancelled periodic Now Playing task. Reason: %s", reason)
 
             with suppress(asyncio.CancelledError):
-                await task_to_cancel.result()
+                await task_to_cancel
 
         async with self._lock:
             self._now_playing_task = None
