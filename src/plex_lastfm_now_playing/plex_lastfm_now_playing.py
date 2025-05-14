@@ -175,6 +175,7 @@ class PlexWebhookHandler:
         self._current_track_details: dict[str, Any] | None = None
         self._now_playing_task: asyncio.Task[None] | None = None
         self._pause_timer_handle: asyncio.TimerHandle | None = None
+        self._cancellation_reason: str | None = None
 
     @staticmethod
     def _generate_track_key(metadata: PlexMetadata) -> str | None:
@@ -190,12 +191,13 @@ class PlexWebhookHandler:
 
     async def shutdown(self, reason: str) -> None:
         """Gracefully shutdown the handler and stop any running tasks."""
-        await self._stop_periodic_update(reason=reason)
+        await self._stop_periodic_update(reason=f"Shutdown: {reason}")
 
     async def _stop_periodic_update(self, reason: str) -> None:
         """Stop the periodic now playing update task and clear state."""
         async with self._lock:
             if self._now_playing_task and not self._now_playing_task.done():
+                self._cancellation_reason = reason
                 self._now_playing_task.cancel()
                 logger.info("Cancelled periodic Now Playing task. Reason: %s", reason)
                 # Allow cancellation to propagate
@@ -218,7 +220,7 @@ class PlexWebhookHandler:
     async def _handle_pause_timeout(self) -> None:
         """Stop updates if still paused."""
         logger.info("Pause timer expired. Stopping periodic updates.")
-        await self._stop_periodic_update(reason="Pause timeout")
+        await self._stop_periodic_update(reason="Pause timeout expired")
 
     async def _periodic_update_loop(self) -> None:
         """Define the core loop that periodically sends now playing updates."""
@@ -241,8 +243,13 @@ class PlexWebhookHandler:
                     album_artist=details.get("album_artist"),
                 )
                 await asyncio.sleep(settings.UPDATE_INTERVAL_SECONDS)
-        except (KeyError, asyncio.CancelledError, ConnectionError, ValueError) as e:
-            await self._stop_periodic_update(reason=f"{type(e).__name__}: {e}")
+        except asyncio.CancelledError:
+            if self._cancellation_reason:
+                logger.info("Periodic Now Playing task cancelled: %s", self._cancellation_reason)
+            else:
+                logger.warning("Periodic Now Playing task cancelled with no reason provided")
+        except (KeyError, ConnectionError, ValueError) as e:
+            await self._stop_periodic_update(reason=f"Error: {e}")
         finally:
             logger.debug("Periodic update loop finished.")
 
@@ -289,9 +296,8 @@ class PlexWebhookHandler:
 
             if self._now_playing_task:
                 if not self._now_playing_task.done():
-                    self._now_playing_task.cancel()
+                    await self._stop_periodic_update(reason="New song started playing")
                 self._now_playing_task = None
-                logger.info("Previous Now Playing task cancelled because we're playing a new song.")
 
             self._current_track_key = track_key
             self._current_track_details = {
