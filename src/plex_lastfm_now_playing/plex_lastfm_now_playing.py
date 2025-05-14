@@ -199,7 +199,11 @@ class PlexWebhookHandler:
             if self._now_playing_task and not self._now_playing_task.done():
                 self._cancellation_reason = reason
                 self._now_playing_task.cancel()
-                logger.info("Cancelled periodic Now Playing task. Reason: %s", reason)
+                if reason == "CancelledError:":
+                    logger.debug("Cancelled periodic update task due to a stop or next song.")
+                else:
+                    logger.info("Cancelled periodic Now Playing task. Reason: %s", reason)
+
                 # Allow cancellation to propagate
                 with contextlib.suppress(TimeoutError, asyncio.CancelledError):
                     await asyncio.wait_for(self._now_playing_task, timeout=1.0)
