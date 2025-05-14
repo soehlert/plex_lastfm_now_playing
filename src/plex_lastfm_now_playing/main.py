@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # noqa: ARG001
     handler = app_state.get("webhook_handler")
     if handler:
         # Gracefully stop any running background task on shutdown
-        await PlexWebhookHandler.shutdown(reason="Application shutdown")
+        await handler.shutdown(reason="Application shutdown")
     logger.info("Cleanup complete.")
 
 
