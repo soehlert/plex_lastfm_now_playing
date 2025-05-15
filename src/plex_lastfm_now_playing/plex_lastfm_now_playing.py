@@ -325,6 +325,9 @@ class PlexWebhookHandler:
             # Send an initial update to lastfm right now
             await self.lastfm_updater.update_now_playing(artist=artist, title=title, album=album, album_artist=artist)
 
+            # Sleep so we don't double scrobble right away
+            await asyncio.sleep(settings.UPDATE_INTERVAL_SECONDS)
+
             # Set up the periodic updates
             logger.debug("Starting periodic Now Playing task for: %s", title)
             self._now_playing_task = asyncio.create_task(self._periodic_update_loop())
