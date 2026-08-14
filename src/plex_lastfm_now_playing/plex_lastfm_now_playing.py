@@ -180,10 +180,9 @@ class PlexWebhookHandler:
     def _generate_track_key(metadata: PlexMetadata) -> str | None:
         """Generate a simple key to identify a track."""
         # Use artist and title as the key. Fall back to parentStudio (often artist for compilations), then just title.
-        if metadata.grandparentTitle and metadata.title:
-            return f"{metadata.grandparentTitle}_{metadata.title}"
-        if metadata.parentStudio and metadata.title:
-            return f"{metadata.parentStudio}_{metadata.title}"
+        artist = metadata.originalTitle or metadata.grandparentTitle
+        if artist and metadata.title:
+            return f"{artist}_{metadata.title}"
         if metadata.title:
             return f"_{metadata.title}"
         return None
@@ -234,6 +233,9 @@ class PlexWebhookHandler:
         """Define the core loop that periodically sends now playing updates."""
         try:
             while True:
+                # Sleep so we don't double scrobble right away
+                await asyncio.sleep(settings.UPDATE_INTERVAL_SECONDS)
+
                 # Lock is acquired before starting the loop in process_webhook
                 # Re-check details within the loop in case state changed between intervals
                 async with self._lock:
@@ -251,10 +253,8 @@ class PlexWebhookHandler:
                         album=details.get("album"),
                         album_artist=details.get("album_artist"),
                     )
-                    await asyncio.sleep(settings.UPDATE_INTERVAL_SECONDS)
                 except ConnectionError as e:
                     logger.debug("Periodic update loop connection error: %s", e)
-                    await asyncio.sleep(settings.UPDATE_INTERVAL_SECONDS)
                     continue
                 except (KeyError, ValueError):
                     logger.exception("Error in periodic update")
@@ -301,15 +301,20 @@ class PlexWebhookHandler:
 
     async def _handle_play_event(self, metadata: PlexMetadata | None) -> None:
         """Handle media.play and media.resume events."""
-        if not metadata or not metadata.title or not (metadata.grandparentTitle or metadata.parentStudio):
+        if not metadata:
             logger.warning("Received 'media.play' event with missing metadata. Skipping.")
             return
 
-        artist = metadata.grandparentTitle or metadata.parentStudio
+        artist = metadata.originalTitle or metadata.grandparentTitle
         title = metadata.title
         album = metadata.parentTitle
-        track_key = self._generate_track_key(metadata)
+        album_artist = metadata.grandparentTitle
 
+        if not artist or not title:
+            logger.warning("Received 'media.play' event missing title or artist. Skipping.")
+            return
+
+        track_key = self._generate_track_key(metadata)
         if not track_key:
             logger.warning("Could not generate track key for 'media.play'. Skipping.")
             return
@@ -337,14 +342,11 @@ class PlexWebhookHandler:
                 "artist": artist,
                 "title": title,
                 "album": album,
-                "album_artist": artist,
+                "album_artist": album_artist,
             }
 
             # Send an initial update to lastfm right now
-            await self.lastfm_updater.update_now_playing(artist=artist, title=title, album=album, album_artist=artist)
-
-            # Sleep so we don't double scrobble right away
-            await asyncio.sleep(settings.UPDATE_INTERVAL_SECONDS)
+            await self.lastfm_updater.update_now_playing(artist=artist, title=title, album=album, album_artist=album_artist)
 
             # Set up the periodic updates
             logger.debug("Starting periodic Now Playing task for: %s", title)

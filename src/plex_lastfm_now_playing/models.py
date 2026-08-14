@@ -6,9 +6,9 @@ from pydantic import BaseModel
 class PlexMetadata(BaseModel):
     """Represent metadata for the media item."""
 
-    parentTitle: str | None = None  # Album artist
-    grandparentTitle: str | None = None  # Artist
-    parentStudio: str | None = None  # Fallback artist if grandparentTitle missing
+    originalTitle: str | None = None  # Track Artist
+    grandparentTitle: str | None = None  # Album Artist
+    parentTitle: str | None = None  # Album Name
     title: str | None = None  # Track title
     parentIndex: int | None = None  # Disc number
     index: int | None = None  # Track number
