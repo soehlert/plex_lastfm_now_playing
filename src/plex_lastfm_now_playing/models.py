@@ -37,6 +37,8 @@ class PlexWebhookPayload(BaseModel):
     Metadata: PlexMetadata | None = None
     Account: PlexAccount | None = None
     Player: PlexPlayer | None = None
+    user: bool | None = False
+    owner: bool | None = False
 
 
 class AuthResponse(BaseModel):
