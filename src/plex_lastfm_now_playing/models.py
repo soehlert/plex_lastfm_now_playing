@@ -14,6 +14,7 @@ class PlexMetadata(BaseModel):
     index: int | None = None  # Track number
     type: str | None = None  # e.g., 'track'
     duration: int | None = None  # Duration in ms
+    librarySectionType: str | None = None  # "artist", "show", "movie"
 
 
 class PlexAccount(BaseModel):
