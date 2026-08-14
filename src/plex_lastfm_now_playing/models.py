@@ -14,6 +14,7 @@ class PlexMetadata(BaseModel):
     index: int | None = None  # Track number
     type: str | None = None  # e.g., 'track'
     duration: int | None = None  # Duration in ms
+    librarySectionType: str | None = None  # "artist", "show", "movie"
 
 
 class PlexAccount(BaseModel):
@@ -36,6 +37,8 @@ class PlexWebhookPayload(BaseModel):
     Metadata: PlexMetadata | None = None
     Account: PlexAccount | None = None
     Player: PlexPlayer | None = None
+    user: bool | None = False
+    owner: bool | None = False
 
 
 class AuthResponse(BaseModel):

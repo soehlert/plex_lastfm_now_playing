@@ -270,6 +270,24 @@ class PlexWebhookHandler:
         """Process the incoming webhook payload."""
         event = payload.event
         metadata = payload.Metadata
+
+        # verify the server owner is the one playing music
+        if not payload.user:
+            account_name = getattr(payload.Account, "title", "Unknown") if payload.Account else "Unknown"
+            logger.debug(
+                "Ignoring event triggered by user '%s' (not webhook owner)",
+                account_name
+            )
+            return
+
+        # verify we're only passing along a song from a music library
+        if not metadata or metadata.type != "track" or metadata.librarySectionType != "artist":
+            logger.debug(
+                "Ignoring non-track media type '%s' (librarySectionType: '%s')",
+                getattr(metadata, "type", None),
+                getattr(metadata, "librarySectionType", None),
+            )
+            return
         logger.debug("Processing webhook event: %s", event)
 
         if event in ["media.play", "media.resume"]:
