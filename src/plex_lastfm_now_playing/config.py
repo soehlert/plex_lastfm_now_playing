@@ -5,9 +5,6 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-
 
 class Settings(BaseSettings):
     """Define the settings we need."""
@@ -31,3 +28,11 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+logging.basicConfig(
+    level=settings.LOG_LEVEL.upper(),
+    format="%(levelname)s:%(name)s:%(message)s",
+    force=True,  # Overrides any previously configured root loggers
+)
+
+logger = logging.getLogger(__name__)
